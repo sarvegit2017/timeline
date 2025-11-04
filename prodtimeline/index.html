@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f6f6f6;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    /* Horizontal timeline */
+    .timeline-container {
+      display: flex;
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: nowrap;
+      gap: 16px;
+      padding: 20px 0;
+      border-bottom: 2px solid #aaa;
+      scroll-behavior: smooth;
+    }
+
+    .timeline-container::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .timeline-event {
+      display: inline-block;
+      min-width: 140px;
+      background: white;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #999;
+      cursor: pointer;
+      text-align: center;
+      transition: transform .2s;
+      white-space: normal;
+    }
+
+    .timeline-event:hover {
+      transform: scale(1.05);
+    }
+
+    .timeline-year {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    /* Modal */
+    .modal {
+      position: fixed !important;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.45);
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      width: 400px;
+      max-width: 90%;
+    }
+
+    .close-btn {
+      float: right;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    textarea, input, select {
+      width: 100%;
+      margin-top: 6px;
+      margin-bottom: 12px;
+      padding: 6px;
+    }
+
+    button {
+      padding: 8px 14px;
+      cursor: pointer;
+    }
+
+  </style>
+</head>
+<body>
+
+<h1>Interactive Historical Timeline</h1>
+
+<!-- Timeline Box -->
+<div id="timeline" class="timeline-container"></div>
+
+<!-- Modal -->
+<div id="eventModal" class="modal">
+  <div class="modal-content">
+    <span class="close-btn" onclick="closeModal()">✖</span>
+
+    <h3 id="modalTitle"></h3>
+    <p><strong>Year:</strong> <span id="modalYear"></span></p>
+    <p><strong>Description:</strong></p>
+    <p id="modalDesc"></p>
+
+    <button onclick="enableEdit()">Edit</button>
+
+    <!-- Edit Form -->
+    <div id="editForm" style="display:none; margin-top: 15px;">
+      <label>Event Name</label>
+      <input id="editName">
+
+      <label>Year</label>
+      <input id="editYear" type="number">
+
+      <label>Era</label>
+      <select id="editEra">
+        <option value="BC">BC</option>
+        <option value="CE">CE</option>
+      </select>
+
+      <label>Description</label>
+      <textarea id="editDesc" rows="4"></textarea>
+
+      <button onclick="saveChanges()">Save</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+let currentEvent = null;
+
+function loadTimeline() {
+  google.script.run.withSuccessHandler(events => {
+    const timeline = document.getElementById("timeline");
+    timeline.innerHTML = "";
+
+    events.forEach(event => {
+      const div = document.createElement("div");
+      div.className = "timeline-event";
+      div.innerHTML = `
+        <div class="timeline-year">${event.year} ${event.era}</div>
+        <div>${event.name}</div>
+      `;
+      div.onclick = () => showEvent(event);
+      timeline.appendChild(div);
+    });
+  }).getEvents();
+}
+
+function showEvent(event) {
+  currentEvent = event;
+
+  document.getElementById("modalTitle").innerText = event.name;
+  document.getElementById("modalYear").innerText = event.year + " " + event.era;
+  document.getElementById("modalDesc").innerText = event.description || "";
+
+  document.getElementById("eventModal").style.display = "flex";
+}
+
+function closeModal() {
+  document.getElementById("eventModal").style.display = "none";
+  document.getElementById("editForm").style.display = "none";
+}
+
+function enableEdit() {
+  document.getElementById("editForm").style.display = "block";
+
+  document.getElementById("editName").value = currentEvent.name;
+  document.getElementById("editYear").value = currentEvent.year;
+  document.getElementById("editEra").value = currentEvent.era;
+  document.getElementById("editDesc").value = currentEvent.description;
+}
+
+function saveChanges() {
+  currentEvent.name = document.getElementById("editName").value;
+  currentEvent.year = document.getElementById("editYear").value;
+  currentEvent.era = document.getElementById("editEra").value;
+  currentEvent.description = document.getElementById("editDesc").value;
+
+  google.script.run.withSuccessHandler(() => {
+    closeModal();
+    loadTimeline();
+  }).updateEvent(currentEvent);
+}
+
+document.addEventListener("DOMContentLoaded", loadTimeline);
+</script>
+
+</body>
+</html>
